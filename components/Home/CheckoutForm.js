@@ -32,7 +32,7 @@ function CheckoutForm({amount}) {
             clientSecret:secretKey,
             elements,
             confirmParams:{
-                return_url:"http://localhost:3000/payment-confirm"
+                return_url:"https://uber-clone-f2z7.vercel.app/payment-confirm"
             }
         })
     }
