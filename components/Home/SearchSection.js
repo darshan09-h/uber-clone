@@ -69,7 +69,7 @@ function SearchSection({
       />
 
       <button
-        className="p-3 bg-black w-full mt-5 text-white rounded-lg"
+        className="p-3 bg-black w-full mt-5 text-white rounded-lg cursor-pointer"
         onClick={handleSearch}
       >
         Search
