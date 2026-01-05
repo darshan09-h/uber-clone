@@ -55,7 +55,7 @@ function Recenter({ pickup, dropoff, focus }) {
   return null;
 }
 
-function MapSection({ pickup, dropoff, routeGeoJson, focus }) {
+function MapSection({ pickup, dropoff, routeGeoJson, focus, driver }) {
   useEffect(() => {
     fixLeafletIcons();
   }, []);
@@ -137,6 +137,14 @@ function MapSection({ pickup, dropoff, routeGeoJson, focus }) {
           </Marker>
         )}
 
+        {driver && (
+          <Marker position={[driver.lat, driver.lon]}>
+            <Popup>
+              <b>{driver.name}</b><br />
+              {driver.carNumber}
+            </Popup>
+          </Marker>
+        )}
 
 
         {routeCoords && (

@@ -12,8 +12,15 @@ const stripePromise = loadStripe(
 
 function PaymentInner() {
   const searchParams = useSearchParams();
-  const amountParam = searchParams.get("amount");
-  const amount = Number(amountParam || 0);
+
+  const amount = Number(searchParams.get("amount") || 0);
+  const pickupRaw = searchParams.get("pickup");
+  const dropoffRaw = searchParams.get("dropoff");
+  const distanceKm = Number(searchParams.get("distanceKm") || 0);
+  const carType = searchParams.get("carType") || "Sedan";
+
+  const pickup = pickupRaw ? JSON.parse(pickupRaw) : null;
+  const dropoff = dropoffRaw ? JSON.parse(dropoffRaw) : null;
 
   const options = {
     mode: "payment",
@@ -23,7 +30,13 @@ function PaymentInner() {
 
   return (
     <Elements stripe={stripePromise} options={options}>
-      <CheckoutForm amount={amount} />
+      <CheckoutForm
+        amount={amount}
+        pickup={pickup}
+        dropoff={dropoff}
+        distanceKm={distanceKm}
+        selectedCar={carType}
+      />
     </Elements>
   );
 }

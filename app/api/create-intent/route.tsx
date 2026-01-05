@@ -1,27 +1,33 @@
 import { NextResponse } from "next/server";
-import { error } from "node:console";
-import Stripe from "stripe"
+import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!,{
-    typescript:true,
-    apiVersion:"2025-12-15.clover"
-})
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  typescript: true,
+  apiVersion: "2025-12-15.clover"
+});
 
-export async function POST(request:any) {
-    const data:any= await request.json();
+export async function POST(request: any) {
+  try {
+    const data: any = await request.json();
     const amount = data.amount;
 
-    try{
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount:Number(amount)*100,
-            currency:'INR'
-        })
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Number(amount) * 100,
+      currency: 'inr',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
-        return NextResponse.json(paymentIntent.client_secret,{status:200})
-    }
-    catch(error:any){
-        return new NextResponse(error,{
-            status:400
-        })
-    }
+    return NextResponse.json(
+      { clientSecret: paymentIntent.client_secret },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 400 }
+    );
+  }
 }
+    

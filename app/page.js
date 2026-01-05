@@ -33,7 +33,7 @@ export default function Home() {
           setDistanceKm={setDistanceKm}
           setFocus={setFocus}
         />
-         {distanceKm > 0 && <CarList distanceKm={distanceKm} />}
+         {distanceKm > 0 && <CarList distanceKm={distanceKm} pickup={pickup} dropoff={dropoff}/>}
       </div>
       <div className="md:col-span-2">
         <MapSectionClient

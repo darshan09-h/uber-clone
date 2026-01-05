@@ -7,13 +7,14 @@ const MapSectionInner = dynamic(() => import("./MapSection"), {
   ssr: false,
 });
 
-function MapSectionClient({ pickup, dropoff, routeGeoJson, focus }) {
+function MapSectionClient({ pickup, dropoff, routeGeoJson, focus, driver }) {
   return (
     <MapSectionInner
       pickup={pickup}
       dropoff={dropoff}
       routeGeoJson={routeGeoJson}
       focus={focus}
+      driver={driver}
     />
   );
 }
