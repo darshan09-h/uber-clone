@@ -169,10 +169,11 @@ export default function TripStatusClient() {
 
         <button
           onClick={() => (window.location.href = "/")}
-          className="mt-4 bg-black text-white px-4 py-1 rounded-xl"
+          className="mt-4 bg-black text-white px-4 py-1 rounded-xl cursor-pointer hover:bg-gray-800 transition"
         >
           Book New Ride
         </button>
+
       </div>
     </div>
   );

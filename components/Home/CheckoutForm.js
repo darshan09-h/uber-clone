@@ -2,7 +2,7 @@
 
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import React from "react";
-import { useUser } from "@clerk/nextjs";  
+import { useUser } from "@clerk/nextjs";
 
 const backendBaseUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
@@ -37,7 +37,7 @@ function CheckoutForm({ amount, pickup, dropoff, distanceKm, selectedCar }) {
         const data = await res.json();
         const clientSecret = data.clientSecret || data; // depending on your route
 
-        console.log("clientSecret:", clientSecret);
+        // console.log("clientSecret:", clientSecret);
 
         // 2) Confirm payment (no redirect, we handle manually)
         const { error, paymentIntent } = await stripe.confirmPayment({
@@ -64,7 +64,7 @@ function CheckoutForm({ amount, pickup, dropoff, distanceKm, selectedCar }) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    userId: userId, 
+                    userId: userId,
                     pickup: pickup,
                     dropoff: dropoff,
                     distanceKm: distanceKm,
@@ -94,7 +94,7 @@ function CheckoutForm({ amount, pickup, dropoff, distanceKm, selectedCar }) {
             <h2 className="m-5 font-bold">Amount to Pay: {amount}</h2>
             <form onSubmit={handleSubmit} className="max-w-md">
                 <PaymentElement />
-                <button className="w-full bg-black text-white p-2 rounded-lg mt-2">
+                <button className="w-full bg-black text-white p-2 rounded-lg mt-2 cursor-pointer hover:bg-gray-800 transition">
                     Pay
                 </button>
             </form>
