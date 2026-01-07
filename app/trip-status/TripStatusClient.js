@@ -23,14 +23,13 @@ export default function TripStatusClient() {
   // ==============================
   async function fetchRoute(pickup, dropoff) {
     const url = `${ROUTING_URL}?waypoints=${pickup.lat},${pickup.lon}|${dropoff.lat},${dropoff.lon}&mode=drive&details=geometry&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}`;
-
     const res = await fetch(url);
     if (!res.ok) throw new Error("Failed to fetch route");
     return res.json();
   }
 
   // ==============================
-  // POLL RIDE STATUS (EASY FIX)
+  // MOVE DRIVER + FETCH RIDE (KEY FIX)
   // ==============================
   useEffect(() => {
     if (!rideId) {
@@ -38,21 +37,34 @@ export default function TripStatusClient() {
       return;
     }
 
-    const fetchRide = async () => {
+    let intervalId;
+
+    const updateTrip = async () => {
       try {
+        // 🔁 MOVE DRIVER (THIS MAKES MARKER MOVE)
+        await fetch(`${BACKEND_URL}/api/rides/${rideId}/move-driver`, {
+          method: "PATCH",
+        });
+
+        // 🔄 FETCH UPDATED RIDE
         const res = await fetch(`${BACKEND_URL}/api/rides/${rideId}`);
         const data = await res.json();
         setRide(data);
+
+        // 🛑 STOP WHEN DONE
+        if (data.status === "completed" || data.status === "cancelled") {
+          clearInterval(intervalId);
+        }
       } catch (err) {
-        console.error("Fetch ride error:", err);
+        console.error("Trip update error:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRide(); // first load
+    updateTrip(); // first run immediately
+    intervalId = setInterval(updateTrip, 1000); // every second
 
-    const intervalId = setInterval(fetchRide, 3000); // poll every 3 sec
     return () => clearInterval(intervalId);
   }, [rideId]);
 
@@ -68,41 +80,18 @@ export default function TripStatusClient() {
   }, [ride]);
 
   // ==============================
-  // UPDATE STATUS (CANCEL)
+  // CANCEL TRIP
   // ==============================
-  const updateStatus = async (status) => {
-    if (!rideId) return;
-    setUpdating(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/rides/${rideId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const data = await res.json();
-      if (res.ok) setRide(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   const cancelTrip = async () => {
-    await updateStatus("cancelled");
+    setUpdating(true);
+    await fetch(`${BACKEND_URL}/api/rides/${rideId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    setUpdating(false);
     window.location.href = "/trips";
   };
-
-  // ==============================
-  // AUTO REDIRECT AFTER COMPLETION
-  // ==============================
-  useEffect(() => {
-    if (ride?.status === "completed") {
-      setTimeout(() => {
-        window.location.href = "/trips";
-      }, 2000);
-    }
-  }, [ride]);
 
   // ==============================
   // UI STATES
@@ -114,30 +103,14 @@ export default function TripStatusClient() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">Trip Status</h1>
 
-      {/* TRIP DETAILS */}
       <div className="bg-white rounded-lg shadow p-4 space-y-2">
-        <p>
-          <span className="font-semibold">Status:</span>{" "}
-          <span className="capitalize">{ride.status}</span>
-        </p>
-        <p>
-          <span className="font-semibold">Pickup:</span>{" "}
-          {ride.pickup?.label}
-        </p>
-        <p>
-          <span className="font-semibold">Dropoff:</span>{" "}
-          {ride.dropoff?.label}
-        </p>
-        <p>
-          <span className="font-semibold">Distance:</span>{" "}
-          {ride.distanceKm} km
-        </p>
-        <p>
-          <span className="font-semibold">Price:</span> ₹{ride.price}
-        </p>
+        <p><b>Status:</b> {ride.status}</p>
+        <p><b>Pickup:</b> {ride.pickup?.label}</p>
+        <p><b>Dropoff:</b> {ride.dropoff?.label}</p>
+        <p><b>Distance:</b> {ride.distanceKm} km</p>
+        <p><b>Price:</b> ₹{ride.price}</p>
       </div>
 
-      {/* MAP */}
       <div className="mt-6">
         <MapSectionClient
           pickup={ride.pickup}
@@ -148,13 +121,12 @@ export default function TripStatusClient() {
         />
       </div>
 
-      {/* ACTIONS */}
-      <div className="mt-4 flex gap-3 flex-wrap">
+      <div className="mt-4 flex gap-3">
         {(ride.status === "booked" || ride.status === "ongoing") && (
           <button
             onClick={cancelTrip}
             disabled={updating}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+            className="bg-red-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-red-800 transition"
           >
             Cancel Trip
           </button>
@@ -162,21 +134,12 @@ export default function TripStatusClient() {
 
         <button
           onClick={() => (window.location.href = "/")}
-          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition cursor-pointer"
+          className="bg-black text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-800 transition"
         >
           Book New Ride
         </button>
       </div>
-
-      {/* DRIVER DETAILS */}
-      {ride.driver && (
-        <div className="mt-6 border p-4 rounded-lg">
-          <h3 className="font-bold mb-2">Driver Details</h3>
-          <p>Name: {ride.driver.name}</p>
-          <p>Car: {ride.driver.carNumber}</p>
-          <p>Status: {ride.status}</p>
-        </div>
-      )}
+      {ride.driver && ( <div className="mt-6 border p-4 rounded-lg"> <h3 className="font-bold mb-2">Driver Details</h3> <p>Name: {ride.driver.name}</p> <p>Car: {ride.driver.carNumber}</p> <p>Status: {ride.status}</p> </div> )}
     </div>
   );
 }
