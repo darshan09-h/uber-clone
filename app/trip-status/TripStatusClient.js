@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import MapSectionClient from "../../components/Home/MapSectionClient";
 
 const BACKEND_URL =
@@ -29,7 +30,7 @@ export default function TripStatusClient() {
   }
 
   // ==============================
-  // MOVE DRIVER + FETCH RIDE (KEY FIX)
+  // FETCH + MOVE DRIVER
   // ==============================
   useEffect(() => {
     if (!rideId) {
@@ -41,35 +42,45 @@ export default function TripStatusClient() {
 
     const updateTrip = async () => {
       try {
-        // 🔁 MOVE DRIVER (THIS MAKES MARKER MOVE)
         await fetch(`${BACKEND_URL}/api/rides/${rideId}/move-driver`, {
           method: "PATCH",
         });
 
-        // 🔄 FETCH UPDATED RIDE
         const res = await fetch(`${BACKEND_URL}/api/rides/${rideId}`);
+        if (!res.ok) {
+          setRide(null);
+          return;
+        }
+
         const data = await res.json();
+
+        if (!data || data.status === "cancelled") {
+          setRide(null);
+          clearInterval(intervalId);
+          return;
+        }
+
         setRide(data);
 
-        // 🛑 STOP WHEN DONE
-        if (data.status === "completed" || data.status === "cancelled") {
+        if (data.status === "completed") {
           clearInterval(intervalId);
         }
       } catch (err) {
         console.error("Trip update error:", err);
+        setRide(null);
       } finally {
         setLoading(false);
       }
     };
 
-    updateTrip(); // first run immediately
-    intervalId = setInterval(updateTrip, 1000); // every second
+    updateTrip();
+    intervalId = setInterval(updateTrip, 1000);
 
     return () => clearInterval(intervalId);
   }, [rideId]);
 
   // ==============================
-  // FETCH ROUTE WHEN RIDE LOADS
+  // FETCH ROUTE
   // ==============================
   useEffect(() => {
     if (!ride?.pickup || !ride?.dropoff) return;
@@ -89,16 +100,48 @@ export default function TripStatusClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "cancelled" }),
     });
+    setRide(null);
     setUpdating(false);
-    window.location.href = "/trips";
   };
 
   // ==============================
   // UI STATES
   // ==============================
   if (loading) return <div className="p-6">Loading trip...</div>;
-  if (!ride || ride.error) return <div className="p-6">Trip not found.</div>;
 
+  // ✅ EMPTY STATE (No ride / Cancelled / No rideId)
+  if (!ride) {
+    return (
+      <div className="bg-[#f1f1f1] flex h-screen items-center justify-center flex-col">
+        <h2 className="text-[28px] mt-[-30px]">
+          No Ride Booked Yet
+        </h2>
+
+        <Image
+          src="/uberconfirm.gif"
+          width={500}
+          height={150}
+          alt="No trip available"
+          className="object-cover mt-[-60px]"
+        />
+
+        <h2 className="font-bold text-[22px] mt-[-20px] mb-10 text-center">
+          No Trip Status Available
+        </h2>
+
+        <button
+          className="p-2 bg-black text-white px-10 rounded-lg cursor-pointer"
+          onClick={() => (window.location.href = "/")}
+        >
+          Book a Ride
+        </button>
+      </div>
+    );
+  }
+
+  // ==============================
+  // ACTIVE TRIP UI
+  // ==============================
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">Trip Status</h1>
@@ -139,7 +182,15 @@ export default function TripStatusClient() {
           Book New Ride
         </button>
       </div>
-      {ride.driver && ( <div className="mt-6 border p-4 rounded-lg"> <h3 className="font-bold mb-2">Driver Details</h3> <p>Name: {ride.driver.name}</p> <p>Car: {ride.driver.carNumber}</p> <p>Status: {ride.status}</p> </div> )}
+
+      {ride.driver && (
+        <div className="mt-6 border p-4 rounded-lg">
+          <h3 className="font-bold mb-2">Driver Details</h3>
+          <p>Name: {ride.driver.name}</p>
+          <p>Car: {ride.driver.carNumber}</p>
+          <p>Status: {ride.status}</p>
+        </div>
+      )}
     </div>
   );
 }

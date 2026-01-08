@@ -15,21 +15,58 @@ function Header() {
   const [openMenu, setOpenMenu] = useState(null);
   const [trips, setTrips] = useState([]);
   const menuRef = useRef(null);
+  const intervalRef = useRef(null);
 
-  // fetch trips for dropdown
+  // ==============================
+  // FETCH USER TRIPS (REUSABLE)
+  // ==============================
+  const fetchTrips = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/rides/user/${userId}`);
+      const data = await res.json();
+      setTrips(Array.isArray(data) ? data : []);
+    } catch {
+      setTrips([]);
+    }
+  };
+
+  // ==============================
+  // INITIAL + POLLING FETCH
+  // ==============================
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`${BACKEND_URL}/api/rides/user/${userId}`)
-      .then(res => res.json())
-      .then(data => setTrips(data))
-      .catch(() => {});
+    fetchTrips();
+
+    intervalRef.current = setInterval(fetchTrips, 5000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [userId]);
 
+  // ==============================
+  // REFRESH ON TAB FOCUS
+  // ==============================
+  useEffect(() => {
+    const onFocus = () => fetchTrips();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [userId]);
+
+  // ==============================
+  // ACTIVE TRIP DETECTION
+  // ==============================
   const activeTrip = trips.find(
-    t => t.status === "booked" || t.status === "ongoing"
+    t =>
+      t.status?.toLowerCase() === "booked" ||
+      t.status?.toLowerCase() === "ongoing"
   );
 
+  // ==============================
+  // MENU CONFIG
+  // ==============================
   const headerMenu = [
     {
       id: 1,
@@ -37,14 +74,12 @@ function Header() {
       icon: "/taxi.jpeg",
       href: "/",
       dropdown: [
-        ...(activeTrip
-          ? [
-              {
-                name: "Trip Status",
-                href: `/trip-status?rideId=${activeTrip._id}`,
-              },
-            ]
-          : []),
+        {
+          name: "Trip Status",
+          href: activeTrip
+            ? `/trip-status?rideId=${activeTrip._id}`
+            : "/trip-status",
+        },
         { name: "Trip History", href: "/trips" },
       ],
     },
@@ -56,6 +91,9 @@ function Header() {
     },
   ];
 
+  // ==============================
+  // CLOSE MENU ON OUTSIDE CLICK
+  // ==============================
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -67,11 +105,19 @@ function Header() {
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ==============================
+  // UI
+  // ==============================
   return (
     <div className="p-5 pb-3 pl-10 border-b-[4px] border-gray-200 flex items-center justify-between">
       <div className="flex gap-24 items-center">
         <Link href="/">
-          <Image src="/Uber_logo_2018.png" width={70} height={70} alt="Logo" />
+          <Image
+            src="/Uber_logo_2018.png"
+            width={70}
+            height={70}
+            alt="Logo"
+          />
         </Link>
 
         <div className="flex gap-6 items-center" ref={menuRef}>
